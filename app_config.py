@@ -29,10 +29,10 @@ HOME_CLUSTERS_PATH = BASE_DIR / "Files/home_year_clusters.parquet"
 
 # Historical outdoor temperature data (parquet files by location_id and year)
 # Structure: OUTDOOR_TEMPS_DIR / location_id=XXXX / year=YYYY.parquet
-DATA_CACHE_DIR = BASE_DIR / "data_cache"
+DATA_CACHE_DIR = BASE_DIR / "Files"
 OUTDOOR_TEMPS_DIR = DATA_CACHE_DIR / "3_Outdoor_temps"
 OUTDOOR_LOCATIONS_PATH = LOCATIONS_PATH
-OUTDOOR_TEMPS_GDRIVE_FILE_ID = "1hbEU0HZEOEebA2pDQpG-Kv3UeDORE-Ek"
+OUTDOOR_TEMPS_ZIP_URL = "https://github.com/IsabelMendez90/Thermostat_/releases/download/data-v1/3_Outdoor_temps.zip"
 
 # ---------- Open-Meteo ----------
 GEOCODE_URL = "https://geocoding-api.open-meteo.com/v1/search"
