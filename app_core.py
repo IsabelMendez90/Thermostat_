@@ -1,27 +1,4 @@
 #!/usr/bin/env python3
-"""
-Smart Ecobee Thermostat - Personalized Energy Dashboard (Streamlit)
-===================================================================
-One-file Streamlit app that mimics an Ecobee-like UI + personalization:
-- Setup wizard (location, building, schedules, neighbor matching)
-- Home screen (Tin prediction optional)
-- Schedule manager with name-based + location-based suggestions
-- 7-day forecast with scenario comparison (sandbox scenarios)
-- Optional OpenRouter assistant + scenario builder
-
-SECURITY:
-- DO NOT hardcode API keys.
-- Set OPENROUTER_API_KEY in environment OR Streamlit secrets.
-
-Run:
-  pip install -r requirements.txt
-  streamlit run app.py
-
-Suggested requirements:
-  streamlit pandas numpy requests plotly pyarrow
-Optional:
-  rapidfuzz xgboost joblib streamlit-js-eval openai
-"""
 
 from __future__ import annotations
 
@@ -165,7 +142,7 @@ def render_setup_location():
     if st.button("Next →", use_container_width=True, type="primary"):
         if not st.session_state.location_name:
             st.session_state.location_name = f"Location ({st.session_state.user_lat:.2f}, {st.session_state.user_lon:.2f})"
-        st.session_state.setup_step = 3  # Skip building info, go directly to schedules
+        st.session_state.setup_step = 2
         st.rerun()
 
 def render_setup_building():
@@ -192,7 +169,7 @@ def render_setup_building():
     col_back, col_next = st.columns(2)
     with col_back:
         if st.button("← Back", use_container_width=True):
-            st.session_state.setup_step = 1
+            st.session_state.setup_step = 2
             st.rerun()
     with col_next:
         if st.button("Next →", use_container_width=True, type="primary"):
