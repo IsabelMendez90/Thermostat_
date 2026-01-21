@@ -1,4 +1,27 @@
 #!/usr/bin/env python3
+"""
+Smart Ecobee Thermostat - Personalized Energy Dashboard (Streamlit)
+===================================================================
+One-file Streamlit app that mimics an Ecobee-like UI + personalization:
+- Setup wizard (location, building, schedules, neighbor matching)
+- Home screen (Tin prediction optional)
+- Schedule manager with name-based + location-based suggestions
+- 7-day forecast with scenario comparison (sandbox scenarios)
+- Optional OpenRouter assistant + scenario builder
+
+SECURITY:
+- DO NOT hardcode API keys.
+- Set OPENROUTER_API_KEY in environment OR Streamlit secrets.
+
+Run:
+  pip install -r requirements.txt
+  streamlit run app.py
+
+Suggested requirements:
+  streamlit pandas numpy requests plotly pyarrow
+Optional:
+  rapidfuzz xgboost joblib streamlit-js-eval openai
+"""
 
 from __future__ import annotations
 
@@ -35,8 +58,10 @@ from neighbors import (
     load_neighbor_data,
 )
 from outdoor_data import (
+    available_years_for_location,
     find_nearest_outdoor_location,
     load_day_outdoor_temps_from_nearest_location,
+    load_full_year_outdoor_temps,
 )
 from schedule_suggestions import (
     bootstrap_default_schedules_from_location,
@@ -1463,14 +1488,21 @@ def render_reports():
     tin_model = st.session_state.tin_model
     runtime_predictor = st.session_state.runtime_predictor
 
+    # Find nearest weather station (used for year availability + info)
+    location_id, distance_km = find_nearest_outdoor_location(st.session_state.user_lat, st.session_state.user_lon)
+    available_years = available_years_for_location(location_id) if location_id else []
+    if not available_years:
+        available_years = [2025]
+
     # Year selector and equipment settings
     col_year, col_equip, col_rate = st.columns([1, 1, 1])
     with col_year:
-        analysis_year = 2025
-        st.markdown(
-            '<div class="static-field"><div class="static-field-label">Analysis Year</div>'
-            f'<div class="static-field-value">{analysis_year}</div></div>',
-            unsafe_allow_html=True,
+        default_index = available_years.index(2025) if 2025 in available_years else len(available_years) - 1
+        analysis_year = st.selectbox(
+            "Analysis Year",
+            options=available_years,
+            index=max(default_index, 0),
+            key="analysis_year",
         )
     with col_equip:
         equipment_presets = {
@@ -1545,9 +1577,6 @@ def render_reports():
     cache_key_annual = f"annual_{analysis_year}_{hash(str(st.session_state.schedules))}_{hash(str(st.session_state.schedule_priorities))}_{st.session_state.user_lat}_{st.session_state.user_lon}"
     if not hasattr(st.session_state, "annual_energy_cache"):
         st.session_state.annual_energy_cache = {}
-
-    # Find nearest weather station
-    location_id, distance_km = find_nearest_outdoor_location(st.session_state.user_lat, st.session_state.user_lon)
 
     if location_id:
         st.info(f"📍 Weather station **#{location_id}** ({distance_km:.1f} km from your location)")
@@ -2167,10 +2196,10 @@ def render_reports():
 
         # Extreme Day Analysis (Coldest and Hottest)
         st.markdown("---")
-        st.markdown("### 🌡️ Extreme Day Analysis (2025)")
+        st.markdown(f"### 🌡️ Extreme Day Analysis ({analysis_year})")
         st.markdown(
             '<p style="color: white; font-size: 14px; margin-bottom: 16px;">'
-            "Compare your current schedules to another scenario on the coldest and hottest days of 2025."
+            f"Compare your current schedules to another scenario on the coldest and hottest days of {analysis_year}."
             "</p>",
             unsafe_allow_html=True,
         )
@@ -2183,19 +2212,27 @@ def render_reports():
         )
         st.caption(f"Scenario: {scenario_choice}")
 
-        start_date = "2025-01-01"
-        end_date = "2025-12-31"
+        start_date = f"{analysis_year}-01-01"
+        end_date = f"{analysis_year}-12-31"
+        weather_cache_key = f"historical_weather_{analysis_year}_{location_id or 'na'}"
 
-        if not hasattr(st.session_state, "historical_weather_2025") or st.session_state.historical_weather_2025 is None:
-            with st.spinner("Loading 2025 historical weather data..."):
-                st.session_state.historical_weather_2025 = fetch_historical_weather(
+        if weather_cache_key not in st.session_state:
+            with st.spinner(f"Loading {analysis_year} historical weather data..."):
+                weather_df, _, _ = load_full_year_outdoor_temps(
                     st.session_state.user_lat,
                     st.session_state.user_lon,
-                    start_date,
-                    end_date
+                    year=analysis_year,
                 )
+                if weather_df is None or weather_df.empty:
+                    weather_df = fetch_historical_weather(
+                        st.session_state.user_lat,
+                        st.session_state.user_lon,
+                        start_date,
+                        end_date,
+                    )
+                st.session_state[weather_cache_key] = weather_df
 
-        historical_weather = st.session_state.historical_weather_2025
+        historical_weather = st.session_state.get(weather_cache_key)
 
         if historical_weather is not None and not historical_weather.empty:
             daily_temps = historical_weather.groupby(historical_weather["time"].dt.date)["outdoor_temp"].agg(["min", "max", "mean"])
@@ -2204,7 +2241,12 @@ def render_reports():
 
             def load_day_weather(date_obj: date) -> Tuple[Optional[pd.DataFrame], str]:
                 date_str = date_obj.strftime("%Y-%m-%d")
-                day_df = load_day_outdoor_temps_from_nearest_location(
+                if historical_weather is not None and not historical_weather.empty:
+                    day_df = historical_weather[historical_weather["time"].dt.date == date_obj]
+                    if day_df is not None and not day_df.empty:
+                        return day_df, "Nearest station (cached)"
+
+                day_df, _, _ = load_day_outdoor_temps_from_nearest_location(
                     st.session_state.user_lat,
                     st.session_state.user_lon,
                     date_str,
