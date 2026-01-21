@@ -13,7 +13,7 @@ IDX_ALL_PATH = BASE_DIR / "Files/personalization_indices_by_home_all_years.parqu
 PEAKS_ALL_PATH = BASE_DIR / "Files/schedule_clock_peaks_all_years.parquet"  # optional
 FP_HOME_ALL_PATH = BASE_DIR / "Files/schedule_setpoint_home_summary_all_years.parquet"  # optional
 
-TIMING_HOURLY_PATH = BASE_DIR / "Files/schedule_location_timing_hourly.parquet"
+TIMING_HOURLY_PATH = BASE_DIR / "Files/schedule_location_timing_summary.parquet"
 SUGGESTIONS_PATH = BASE_DIR / "Files/schedule_name_suggestions.parquet"
 
 TIN_MODEL_PATH = BASE_DIR / "Files/thermal_model_xgboost_allyears.pkl"  # .pkl/.joblib OR xgb booster (.json/.ubj/.bin)
@@ -32,7 +32,6 @@ HOME_CLUSTERS_PATH = BASE_DIR / "Files/home_year_clusters.parquet"
 DATA_CACHE_DIR = BASE_DIR / "Files"
 OUTDOOR_TEMPS_DIR = DATA_CACHE_DIR / "3_Outdoor_temps"
 OUTDOOR_LOCATIONS_PATH = LOCATIONS_PATH
-OUTDOOR_TEMPS_ZIP_URL = "https://github.com/IsabelMendez90/Thermostat_/releases/download/data-v1/3_Outdoor_temps.zip"
 
 # ---------- Open-Meteo ----------
 GEOCODE_URL = "https://geocoding-api.open-meteo.com/v1/search"
