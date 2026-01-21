@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -43,7 +43,9 @@ def find_nearest_outdoor_location(lat: float, lon: float) -> Tuple[Optional[int]
 
 def load_outdoor_temps_for_location(location_id: int, year: int) -> Optional[pd.DataFrame]:
     try:
-        path = OUTDOOR_TEMPS_DIR / f"location_id={location_id}" / f"year={year}.parquet"
+        path = OUTDOOR_TEMPS_DIR / f"location_id={location_id:04d}" / f"year={year}.parquet"
+        if not path.exists():
+            path = OUTDOOR_TEMPS_DIR / f"location_id={location_id}" / f"year={year}.parquet"
         if not path.exists():
             return None
         df = pd.read_parquet(path)
@@ -52,6 +54,22 @@ def load_outdoor_temps_for_location(location_id: int, year: int) -> Optional[pd.
         return df
     except Exception:
         return None
+
+
+def available_years_for_location(location_id: int) -> List[int]:
+    base_dir = OUTDOOR_TEMPS_DIR / f"location_id={location_id:04d}"
+    if not base_dir.exists():
+        base_dir = OUTDOOR_TEMPS_DIR / f"location_id={location_id}"
+    if not base_dir.exists():
+        return []
+    years: List[int] = []
+    for path in base_dir.glob("year=*.parquet"):
+        stem = path.stem  # year=YYYY
+        try:
+            years.append(int(stem.split("=", 1)[1]))
+        except (IndexError, ValueError):
+            continue
+    return sorted(set(years))
 
 
 def load_full_year_outdoor_temps(lat: float, lon: float, year: int = 2023) -> Tuple[Optional[pd.DataFrame], Optional[int], float]:
